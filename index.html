@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scribble Game 🎨</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎨 Multiplayer Scribble Game</h1>
+
+      <div id="lobby">
+        <input id="playerName" placeholder="Enter your name" />
+        <div class="controls">
+          <button id="createBtn">Create Game</button>
+          <button id="joinBtn">Join Game</button>
+        </div>
+        <input id="gameIdInput" placeholder="Enter Game ID to Join" />
+      </div>
+
+      <div id="gameUI" class="hidden">
+        <div id="left-section">
+          <p>Game ID: <strong id="gameIdDisplay"></strong></p>
+          <p>Drawer: <strong id="drawerName">TBD</strong></p>
+          <p id="wordHint"></p>
+          <canvas id="canvas" width="600" height="400"></canvas>
+
+          <div class="controls">
+            <label for="colorPicker">✏️ Color:</label>
+            <input type="color" id="colorPicker" value="#222222" />
+            <button id="clearBtn">Clear</button>
+          </div>
+        </div>
+
+        <div id="right-section">
+          <div id="chat-box">
+            <div id="chat-messages"></div>
+            <div id="chat-controls">
+              <input id="chat-input" placeholder="Type your guess..." />
+              <button id="sendBtn">Send</button>
+            </div>
+          </div>
+
+          <div id="scores">
+            <h3>🏆 Scores</h3>
+            <ul id="score-list"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
