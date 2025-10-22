@@ -3,50 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Scribble Game 🎨</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>Scribble Fun Mobile</title>
+    <link href="style.css" rel="stylesheet" />
   </head>
   <body>
-    <div class="container">
-      <h1>🎨 Multiplayer Scribble Game</h1>
-
-      <div id="lobby">
-        <input id="playerName" placeholder="Enter your name" />
-        <div class="controls">
-          <button id="createBtn">Create Game</button>
-          <button id="joinBtn">Join Game</button>
-        </div>
-        <input id="gameIdInput" placeholder="Enter Game ID to Join" />
+    <!-- Menu -->
+    <div id="menu">
+      <h1>Scribble Fun</h1>
+      <input type="text" id="username" placeholder="Enter your name" />
+      <div>
+        <button id="createGame">Create Game</button>
+        <input type="text" id="joinGameId" placeholder="Game ID" />
+        <button id="joinGame">Join Game</button>
       </div>
+      <p id="status"></p>
+    </div>
 
-      <div id="gameUI" class="hidden">
-        <div id="left-section">
-          <p>Game ID: <strong id="gameIdDisplay"></strong></p>
-          <p>Drawer: <strong id="drawerName">TBD</strong></p>
-          <p id="wordHint"></p>
-          <canvas id="canvas" width="600" height="400"></canvas>
-
-          <div class="controls">
-            <label for="colorPicker">✏️ Color:</label>
-            <input type="color" id="colorPicker" value="#222222" />
-            <button id="clearBtn">Clear</button>
-          </div>
-        </div>
-
-        <div id="right-section">
-          <div id="chat-box">
-            <div id="chat-messages"></div>
-            <div id="chat-controls">
-              <input id="chat-input" placeholder="Type your guess..." />
-              <button id="sendBtn">Send</button>
-            </div>
-          </div>
-
-          <div id="scores">
-            <h3>🏆 Scores</h3>
-            <ul id="score-list"></ul>
-          </div>
-        </div>
+    <!-- Game UI -->
+    <div id="game" class="hidden">
+      <div id="gameInfo"></div>
+      <canvas id="canvas"></canvas>
+      <div id="colorTools" class="hidden">
+        <input type="color" id="colorPicker" value="#000000" />
+        <button id="clearCanvas">Clear</button>
+      </div>
+      <div id="chat">
+        <div id="messages"></div>
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Type guess or message"
+        />
+        <button id="sendMessage">Send</button>
       </div>
     </div>
 

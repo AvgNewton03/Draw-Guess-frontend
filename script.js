@@ -1,157 +1,195 @@
 const socket = io("https://draw-guess-backend-tzur.onrender.com");
+
+const menu = document.getElementById("menu");
+const game = document.getElementById("game");
+const createBtn = document.getElementById("createGame");
+const joinBtn = document.getElementById("joinGame");
+const usernameInput = document.getElementById("username");
+const joinInput = document.getElementById("joinGameId");
+const status = document.getElementById("status");
+
+const gameInfo = document.getElementById("gameInfo");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const colorPicker = document.getElementById("colorPicker");
+const clearCanvas = document.getElementById("clearCanvas");
+const colorTools = document.getElementById("colorTools");
+
+const messages = document.getElementById("messages");
+const msgInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendMessage");
 
 let drawing = false;
-let strokes = [];
-let playerName = "";
-let gameId = "";
 let isDrawer = false;
+let currentColor = "#000000";
+let gameId = "";
+let username = "";
 let currentWord = "";
-let color = "#222222";
+let scores = {};
+let guessedThisRound = false;
 
-// 🎨 UI Elements
-const colorPicker = document.getElementById("colorPicker");
-colorPicker.addEventListener("input", (e) => (color = e.target.value));
+ctx.lineWidth = 3;
+ctx.lineCap = "round";
 
-const draw = (e) => {
-  if (!drawing) return;
-  ctx.lineWidth = 3;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = color;
-  ctx.lineTo(e.offsetX, e.offsetY);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(e.offsetX, e.offsetY);
-  socket.emit("draw", { x: e.offsetX, y: e.offsetY, color });
+const WORDS = [
+  "Star",
+  "House",
+  "Bridge",
+  "Car",
+  "Bicycle",
+  "Computer",
+  "Guitar",
+  "Mountain",
+  "River",
+  "Tree",
+  "Clock",
+  "Key",
+  "Book",
+  "Sun",
+  "Moon",
+];
+
+// --- Game Creation / Joining ---
+createBtn.onclick = () => {
+  username = usernameInput.value.trim();
+  if (!username) return alert("Enter your name!");
+  socket.emit("createGame", { username });
 };
 
-canvas.addEventListener("mousedown", (e) => {
-  if (!isDrawer) return;
-  drawing = true;
-  draw(e);
-});
+joinBtn.onclick = () => {
+  username = usernameInput.value.trim();
+  const id = joinInput.value.trim();
+  if (!username || !id) return alert("Enter all fields!");
+  socket.emit("joinGame", { gameId: id, username });
+};
 
-canvas.addEventListener("mouseup", () => {
-  drawing = false;
-  ctx.beginPath();
-});
-
-canvas.addEventListener("mousemove", draw);
-
-// ✋ Touch events for mobile drawing
-canvas.addEventListener("touchstart", (e) => {
-  if (!isDrawer) return;
-  e.preventDefault();
-  drawing = true;
-});
-
-canvas.addEventListener("touchmove", (e) => {
-  if (!drawing) return;
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  const x = touch.clientX - rect.left;
-  const y = touch.clientY - rect.top;
-  ctx.lineWidth = 3;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = color;
-  ctx.lineTo(x, y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  socket.emit("draw", { x, y, color });
-});
-
-canvas.addEventListener("touchend", () => {
-  drawing = false;
-  ctx.beginPath();
-});
-
-// 🧹 Clear canvas
-document.getElementById("clearBtn").addEventListener("click", () => {
-  if (!isDrawer) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  socket.emit("clear");
-});
-
-// ✨ Lobby & Game Controls
-document.getElementById("createBtn").addEventListener("click", () => {
-  playerName = document.getElementById("playerName").value.trim();
-  if (!playerName) return alert("Enter your name first!");
-  socket.emit("createGame", playerName);
-});
-
-document.getElementById("joinBtn").addEventListener("click", () => {
-  playerName = document.getElementById("playerName").value.trim();
-  gameId = document.getElementById("gameIdInput").value.trim();
-  if (!playerName || !gameId) return alert("Enter both name and Game ID!");
-  socket.emit("joinGame", { gameId, playerName });
-});
-
-// 💬 Chat System
-document.getElementById("sendBtn").addEventListener("click", () => {
-  const msg = document.getElementById("chat-input").value.trim();
-  if (msg) {
-    socket.emit("chatMessage", { gameId, playerName, msg });
-    document.getElementById("chat-input").value = "";
-  }
-});
-
-socket.on("chatMessage", (data) => {
-  const chatBox = document.getElementById("chat-messages");
-  const p = document.createElement("p");
-  p.innerHTML = `<strong>${data.playerName}:</strong> ${data.msg}`;
-  chatBox.appendChild(p);
-  chatBox.scrollTop = chatBox.scrollHeight;
-});
-
-// 🎮 Game Events
+// --- Socket Events ---
 socket.on("gameCreated", (data) => {
   gameId = data.gameId;
-  document.getElementById("gameIdDisplay").innerText = gameId;
-  document.getElementById("lobby").classList.add("hidden");
-  document.getElementById("gameUI").classList.remove("hidden");
+  isDrawer = true;
+  scores[username] = 0;
+  startGameUI(`Game created! Share ID: ${gameId}`);
+  startNewRound();
 });
 
 socket.on("gameJoined", (data) => {
   gameId = data.gameId;
-  document.getElementById("gameIdDisplay").innerText = gameId;
-  document.getElementById("lobby").classList.add("hidden");
-  document.getElementById("gameUI").classList.remove("hidden");
+  isDrawer = false;
+  scores = data.scores || {};
+  scores[username] = 0;
+  startGameUI(`Joined game ${gameId}`);
 });
 
-// ✏️ Drawing updates from server
 socket.on("draw", (data) => {
-  ctx.lineWidth = 3;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = data.color || "#222";
+  if (isDrawer) return;
   ctx.lineTo(data.x, data.y);
+  ctx.strokeStyle = data.color;
   ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(data.x, data.y);
 });
 
 socket.on("clear", () => ctx.clearRect(0, 0, canvas.width, canvas.height));
 
-// 🏆 Score updates
-socket.on("updateScores", (scores) => {
-  const list = document.getElementById("score-list");
-  list.innerHTML = "";
-  for (const [name, score] of Object.entries(scores)) {
-    const li = document.createElement("li");
-    li.textContent = `${name}: ${score}`;
-    list.appendChild(li);
+socket.on("chatMessage", (data) => {
+  const div = document.createElement("div");
+  div.textContent = `${data.username}: ${data.msg}`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+});
+
+socket.on("correctGuess", (data) => {
+  const div = document.createElement("div");
+  div.textContent = `✅ ${data.username} guessed the word!`;
+  div.style.fontWeight = "bold";
+  messages.appendChild(div);
+  scores[data.username] = (scores[data.username] || 0) + 10;
+  if (isDrawer) scores[username] += 5;
+  updateScores();
+  guessedThisRound = true;
+  setTimeout(() => startNewRound(), 3000);
+});
+
+socket.on("newRound", (data) => {
+  currentWord = data.word;
+  guessedThisRound = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (isDrawer) {
+    colorTools.classList.remove("hidden");
+    alert(`You are drawing: ${currentWord}`);
+  } else {
+    colorTools.classList.add("hidden");
   }
 });
 
-// 🔁 Turn Management
-socket.on("turnChange", (data) => {
-  const { drawer, wordHint, isYouDrawing } = data;
-  isDrawer = isYouDrawing;
-  document.getElementById("drawerName").innerText = drawer;
-  document.getElementById("wordHint").innerText = isDrawer
-    ? `Your word: ${wordHint}`
-    : `Hint: ${wordHint}`;
+// --- Drawing ---
+canvas.addEventListener("touchstart", (e) => startDraw(e.touches[0]));
+canvas.addEventListener("touchmove", (e) => draw(e.touches[0]));
+canvas.addEventListener("touchend", () => (drawing = false));
+
+canvas.addEventListener("mousedown", (e) => startDraw(e));
+canvas.addEventListener("mousemove", (e) => draw(e));
+canvas.addEventListener("mouseup", () => (drawing = false));
+
+function startDraw(e) {
+  if (!isDrawer) return;
+  drawing = true;
+  ctx.beginPath();
+  ctx.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+}
+
+function draw(e) {
+  if (!drawing || !isDrawer) return;
+  const x = e.clientX - canvas.offsetLeft;
+  const y = e.clientY - canvas.offsetTop;
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = currentColor;
+  ctx.stroke();
+  socket.emit("draw", { gameId, x, y, color: currentColor });
+}
+
+colorPicker.oninput = (e) => (currentColor = e.target.value);
+
+clearCanvas.onclick = () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-});
+  socket.emit("clear", gameId);
+};
+
+// --- Chat & Guessing ---
+sendBtn.onclick = () => {
+  const msg = msgInput.value.trim();
+  if (!msg) return;
+  if (
+    !isDrawer &&
+    !guessedThisRound &&
+    msg.toLowerCase() === currentWord.toLowerCase()
+  ) {
+    socket.emit("correctGuess", { gameId, username });
+    msgInput.value = "";
+    return;
+  }
+  socket.emit("chatMessage", { gameId, username, msg });
+  msgInput.value = "";
+};
+
+// --- UI Helpers ---
+function startGameUI(info) {
+  menu.classList.add("hidden");
+  game.classList.remove("hidden");
+  gameInfo.textContent = info;
+  if (isDrawer) colorTools.classList.remove("hidden");
+  else colorTools.classList.add("hidden");
+  updateScores();
+}
+
+function updateScores() {
+  gameInfo.textContent =
+    `Game ID: ${gameId} | Scores: ` +
+    Object.entries(scores)
+      .map(([u, s]) => `${u}: ${s}`)
+      .join(", ");
+}
+
+// --- New Round ---
+function startNewRound() {
+  currentWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+  socket.emit("newRound", { gameId, word: currentWord });
+}
